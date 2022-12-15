@@ -193,7 +193,7 @@ export default class ObjectAPI {
      * @memberof module:openmct.ObjectProvider#
      * @param {string} key the key for the domain object to load
      * @param {AbortController.signal} abortSignal (optional) signal to abort fetch requests
-     * @returns {Promise} a promise which will resolve when the domain object
+     * @returns {Promise<DomainObject>} a promise which will resolve when the domain object
      *          has been saved, or be rejected if it cannot be saved
      */
     get(identifier, abortSignal) {
@@ -724,6 +724,30 @@ export default class ObjectAPI {
         } else {
             return path;
         }
+    }
+
+    /**
+     * Parse and construct an objectPath from the object's navigation path.
+     *
+     * @param {string} navigationPath
+     * @returns {DomainObject[]} objectPath
+     */
+    async getRelativeObjectPath(navigationPath) {
+        const identifierRegexp = /mine|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+        const identifiers = navigationPath.split('?')[0].match(identifierRegexp);
+        if (!identifiers) {
+            return [];
+        }
+
+        identifiers.unshift('ROOT');
+
+        const objectPath = (await Promise.all(
+            identifiers.map(
+                identifier => this.get(utils.parseKeyString(identifier))
+            )
+        )).reverse();
+
+        return objectPath;
     }
 
     isObjectPathToALink(domainObject, objectPath) {
